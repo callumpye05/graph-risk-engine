@@ -26,6 +26,10 @@ def random_timestamp(start: datetime , end : datetime) -> datetime :
 
 
 def master_data_generator (n_accounts : int , n_transactions : int , n_days : int , fraud_probability : float) -> list :
+    
+    if n_accounts < 2 :
+        raise ValueError("At least two accounts are required for data generation")
+     
     transactions = []
     end_time = datetime.now()
     start_time = end_time - timedelta(days= n_days)
@@ -45,7 +49,10 @@ def master_data_generator (n_accounts : int , n_transactions : int , n_days : in
                 newTx = generate_healthy_transaction_data(nb_tx_for_iteration, n_accounts, start_time, end_time)
             else:
                 burst_size = random.randint(MIN_FRAUD_BURST , max_burst_possible)
-                newTx = generate_repeated_fraudulent_data(burst_size, n_accounts , start_time , end_time)
+                if random.random() < 1/3 :  
+                    newTx = generate_repeated_fraudulent_data(burst_size, n_accounts , start_time , end_time)
+                else : 
+                    newTx = generate_largeamount_fraudulent_data(burst_size , n_accounts , start_time , end_time  )
 
         transactions.extend(newTx[:remaining]) 
 
@@ -55,7 +62,6 @@ def master_data_generator (n_accounts : int , n_transactions : int , n_days : in
     
 def generate_healthy_transaction_data(n_transactions : int , n_accounts , start_time :datetime , end_time : datetime) -> list: 
     transactions = []
-    used_pairs = set()
     for _ in range (n_transactions) : 
         from_account = random.randint(0 , n_accounts - 1)
         to_account = random.randint(0 , n_accounts - 1)
@@ -63,11 +69,6 @@ def generate_healthy_transaction_data(n_transactions : int , n_accounts , start_
         while from_account == to_account  :
             to_account = random.randint(0, n_accounts - 1)
          
-        pair = (from_account, to_account)
-        if pair in used_pairs:
-            continue
-        used_pairs.add(pair)
-
         amount = round(random.uniform(5 , 300) , 2)
         timestamp = random_timestamp(start_time , end_time)
 
@@ -93,12 +94,32 @@ def generate_repeated_fraudulent_data(n_transactions : int  , n_accounts : int ,
     
     return transactions 
 
+def generate_largeamount_fraudulent_data( n_transactions : int , n_accounts : int , start_time : datetime , end_time : datetime) :
+    transactions = []
+
+    for _ in range(n_transactions) :
+
+        amount = round(random.uniform(1000 , 10000) , 2)
+        timestamp = random_timestamp(start_time , end_time)
+        from_account = random.randint(0 , n_accounts - 1)
+        to_account = random.randint(0 , n_accounts - 1)
+
+        while from_account == to_account  :
+            to_account = random.randint(0, n_accounts - 1) 
+
+        tx = create_transaction(from_account , to_account , amount , timestamp , "transfer")
+        transactions.append(tx)
+    return transactions
+
+
 
 
 #Quick test case to check if data is generating 
 if __name__ == "__main__":
     txs = master_data_generator( n_accounts=50,n_transactions=200, n_days=7,fraud_probability=0.125)
-    print(f"Total transactions generated : {len(txs)}\n")
-    for tx in txs[:20]:
+    txs_sorted = sorted(txs, key=lambda tx: tx["amount"], reverse=True)
+
+    print("Top 10 transactions by amount:\n")
+    for tx in txs_sorted[:10]:
         print(tx)
 
