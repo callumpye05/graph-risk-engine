@@ -8,14 +8,16 @@ def create_transaction(
     to_account: int,
     amount: float,
     timestamp: datetime,
-    tx_type: str
+    tx_type: str,
+    is_fraud : bool 
 ) ->dict:
     return {
         "from_account": from_account,
         "to_account": to_account,
         "amount": amount,
         "timestamp": timestamp,
-        "tx_type": tx_type
+        "tx_type": tx_type,
+        "is_fraud": is_fraud
     }
 
 #helper method designed to create a timestamp from an interval passed in parameter
@@ -72,7 +74,7 @@ def generate_healthy_transaction_data(n_transactions : int , n_accounts , start_
         amount = round(random.uniform(5 , 300) , 2)
         timestamp = random_timestamp(start_time , end_time)
 
-        tx = create_transaction(from_account , to_account , amount , timestamp , "transfer" )
+        tx = create_transaction(from_account , to_account , amount , timestamp , "transfer" , False )
         transactions.append(tx)
     
     return transactions
@@ -89,7 +91,7 @@ def generate_repeated_fraudulent_data(n_transactions : int  , n_accounts : int ,
         
         amount = round(random.uniform(75 , 1000) , 2)
         timestamp = base_time + timedelta(minutes=random.randint(0, 30))
-        tx = create_transaction(chosen_from_account , chosen_to_account , amount , timestamp , "transaction")
+        tx = create_transaction(chosen_from_account , chosen_to_account , amount , timestamp , "transaction" , True)
         transactions.append(tx)
     
     return transactions 
@@ -107,7 +109,7 @@ def generate_largeamount_fraudulent_data( n_transactions : int , n_accounts : in
         while from_account == to_account  :
             to_account = random.randint(0, n_accounts - 1) 
 
-        tx = create_transaction(from_account , to_account , amount , timestamp , "transfer")
+        tx = create_transaction(from_account , to_account , amount , timestamp , "transfer" , True)
         transactions.append(tx)
     return transactions
 
