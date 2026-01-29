@@ -118,10 +118,17 @@ def generate_largeamount_fraudulent_data( n_transactions : int , n_accounts : in
 
 #Quick test case to check if data is generating 
 if __name__ == "__main__":
-    txs = master_data_generator( n_accounts=50,n_transactions=200, n_days=7,fraud_probability=0.125)
-    txs_sorted = sorted(txs, key=lambda tx: tx["amount"], reverse=True)
+    txs = master_data_generator(
+        n_accounts=50,
+        n_transactions=200,
+        n_days=7,
+        fraud_probability=0.125
+    )
 
-    print("Top 10 transactions by amount:\n")
-    for tx in txs_sorted[:10]:
+    fraud_txs = [tx for tx in txs if tx["is_fraud"]]
+
+    print(f"Total fraudulent transactions: {len(fraud_txs)}\n")
+
+    for tx in fraud_txs:
         print(tx)
 
