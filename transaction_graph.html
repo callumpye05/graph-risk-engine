@@ -1,0 +1,163 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "lightblue", "font": {"color": "black"}, "id": 4, "label": "Account 4", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 0, "label": "Account 0", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 9, "label": "Account 9", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 3, "label": "Account 3", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 6, "label": "Account 6", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 5, "label": "Account 5", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 8, "label": "Account 8", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 7, "label": "Account 7", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 2, "label": "Account 2", "shape": "dot", "size": 25}, {"color": "lightblue", "font": {"color": "black"}, "id": 1, "label": "Account 1", "shape": "dot", "size": 25}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "gray", "from": 4, "title": "\u003cb\u003eAmount:\u003c/b\u003e 166.98\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 0, "value": 166.98, "width": 1}, {"arrows": "to", "color": "gray", "from": 4, "title": "\u003cb\u003eAmount:\u003c/b\u003e 273.99\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 8, "value": 273.99, "width": 1}, {"arrows": "to", "color": "gray", "from": 4, "title": "\u003cb\u003eAmount:\u003c/b\u003e 68.27\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 8, "value": 68.27, "width": 1}, {"arrows": "to", "color": "gray", "from": 4, "title": "\u003cb\u003eAmount:\u003c/b\u003e 126.39\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 7, "value": 126.39, "width": 1}, {"arrows": "to", "color": "gray", "from": 4, "title": "\u003cb\u003eAmount:\u003c/b\u003e 127.92\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 1, "value": 127.92, "width": 1}, {"arrows": "to", "color": "gray", "from": 4, "title": "\u003cb\u003eAmount:\u003c/b\u003e 144.16\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 2, "value": 144.16, "width": 1}, {"arrows": "to", "color": "gray", "from": 4, "title": "\u003cb\u003eAmount:\u003c/b\u003e 153.16\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 5, "value": 153.16, "width": 1}, {"arrows": "to", "color": "gray", "from": 0, "title": "\u003cb\u003eAmount:\u003c/b\u003e 216.78\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 9, "value": 216.78, "width": 1}, {"arrows": "to", "color": "gray", "from": 0, "title": "\u003cb\u003eAmount:\u003c/b\u003e 24.53\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 4, "value": 24.53, "width": 1}, {"arrows": "to", "color": "gray", "from": 0, "title": "\u003cb\u003eAmount:\u003c/b\u003e 172.41\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 3, "value": 172.41, "width": 1}, {"arrows": "to", "color": "gray", "from": 9, "title": "\u003cb\u003eAmount:\u003c/b\u003e 167.07\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 3, "value": 167.07, "width": 1}, {"arrows": "to", "color": "gray", "from": 9, "title": "\u003cb\u003eAmount:\u003c/b\u003e 39.9\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 7, "value": 39.9, "width": 1}, {"arrows": "to", "color": "gray", "from": 9, "title": "\u003cb\u003eAmount:\u003c/b\u003e 133.88\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 0, "value": 133.88, "width": 1}, {"arrows": "to", "color": "gray", "from": 9, "title": "\u003cb\u003eAmount:\u003c/b\u003e 77.5\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 2, "value": 77.5, "width": 1}, {"arrows": "to", "color": "gray", "from": 9, "title": "\u003cb\u003eAmount:\u003c/b\u003e 164.4\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 2, "value": 164.4, "width": 1}, {"arrows": "to", "color": "gray", "from": 9, "title": "\u003cb\u003eAmount:\u003c/b\u003e 164.6\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 2, "value": 164.6, "width": 1}, {"arrows": "to", "color": "gray", "from": 9, "title": "\u003cb\u003eAmount:\u003c/b\u003e 198.67\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 8, "value": 198.67, "width": 1}, {"arrows": "to", "color": "gray", "from": 3, "title": "\u003cb\u003eAmount:\u003c/b\u003e 207.45\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 0, "value": 207.45, "width": 1}, {"arrows": "to", "color": "gray", "from": 3, "title": "\u003cb\u003eAmount:\u003c/b\u003e 290.29\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 0, "value": 290.29, "width": 1}, {"arrows": "to", "color": "gray", "from": 3, "title": "\u003cb\u003eAmount:\u003c/b\u003e 194.26\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 2, "value": 194.26, "width": 1}, {"arrows": "to", "color": "gray", "from": 3, "title": "\u003cb\u003eAmount:\u003c/b\u003e 254.11\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 1, "value": 254.11, "width": 1}, {"arrows": "to", "color": "gray", "from": 3, "title": "\u003cb\u003eAmount:\u003c/b\u003e 200.89\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 4, "value": 200.89, "width": 1}, {"arrows": "to", "color": "gray", "from": 3, "title": "\u003cb\u003eAmount:\u003c/b\u003e 94.18\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 8, "value": 94.18, "width": 1}, {"arrows": "to", "color": "gray", "from": 3, "title": "\u003cb\u003eAmount:\u003c/b\u003e 79.28\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 8, "value": 79.28, "width": 1}, {"arrows": "to", "color": "gray", "from": 6, "title": "\u003cb\u003eAmount:\u003c/b\u003e 12.82\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 5, "value": 12.82, "width": 1}, {"arrows": "to", "color": "gray", "from": 6, "title": "\u003cb\u003eAmount:\u003c/b\u003e 18.14\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 8, "value": 18.14, "width": 1}, {"arrows": "to", "color": "gray", "from": 6, "title": "\u003cb\u003eAmount:\u003c/b\u003e 214.68\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 9, "value": 214.68, "width": 1}, {"arrows": "to", "color": "gray", "from": 6, "title": "\u003cb\u003eAmount:\u003c/b\u003e 123.08\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 3, "value": 123.08, "width": 1}, {"arrows": "to", "color": "gray", "from": 5, "title": "\u003cb\u003eAmount:\u003c/b\u003e 216.46\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 6, "value": 216.46, "width": 1}, {"arrows": "to", "color": "gray", "from": 5, "title": "\u003cb\u003eAmount:\u003c/b\u003e 75.71\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 4, "value": 75.71, "width": 1}, {"arrows": "to", "color": "gray", "from": 5, "title": "\u003cb\u003eAmount:\u003c/b\u003e 117.86\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 4, "value": 117.86, "width": 1}, {"arrows": "to", "color": "gray", "from": 8, "title": "\u003cb\u003eAmount:\u003c/b\u003e 185.68\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 4, "value": 185.68, "width": 1}, {"arrows": "to", "color": "gray", "from": 8, "title": "\u003cb\u003eAmount:\u003c/b\u003e 126.94\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 3, "value": 126.94, "width": 1}, {"arrows": "to", "color": "gray", "from": 8, "title": "\u003cb\u003eAmount:\u003c/b\u003e 201.93\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 2, "value": 201.93, "width": 1}, {"arrows": "to", "color": "gray", "from": 7, "title": "\u003cb\u003eAmount:\u003c/b\u003e 131.17\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 2, "value": 131.17, "width": 1}, {"arrows": "to", "color": "gray", "from": 2, "title": "\u003cb\u003eAmount:\u003c/b\u003e 161.88\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 4, "value": 161.88, "width": 1}, {"arrows": "to", "color": "gray", "from": 1, "title": "\u003cb\u003eAmount:\u003c/b\u003e 73.75\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 7, "value": 73.75, "width": 1}, {"arrows": "to", "color": "gray", "from": 1, "title": "\u003cb\u003eAmount:\u003c/b\u003e 97.82\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 7, "value": 97.82, "width": 1}, {"arrows": "to", "color": "gray", "from": 1, "title": "\u003cb\u003eAmount:\u003c/b\u003e 292.99\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 3, "value": 292.99, "width": 1}, {"arrows": "to", "color": "gray", "from": 1, "title": "\u003cb\u003eAmount:\u003c/b\u003e 70.86\u003cbr\u003e\u003cb\u003eFraud:\u003c/b\u003e False\u003cbr\u003e\u003cb\u003eType:\u003c/b\u003e transfer", "to": 9, "value": 70.86, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.05,
+            "damping": 0.7,
+            "gravitationalConstant": -30000,
+            "springConstant": 0.006,
+            "springLength": 350
+        },
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
