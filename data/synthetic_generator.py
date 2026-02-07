@@ -1,24 +1,10 @@
 from datetime import datetime,timedelta
 import random
+from data.transaction import Transaction 
 
 MIN_FRAUD_BURST = 5
 
-def create_transaction(
-    from_account: int,
-    to_account: int,
-    amount: float,
-    timestamp: datetime,
-    tx_type: str,
-    is_fraud : bool 
-) ->dict:
-    return {
-        "from_account": from_account,
-        "to_account": to_account,
-        "amount": amount,
-        "timestamp": timestamp,
-        "tx_type": tx_type,
-        "is_fraud": is_fraud
-    }
+
 
 #helper method designed to create a timestamp from an interval passed in parameter
 def random_timestamp(start: datetime , end : datetime) -> datetime : 
@@ -27,7 +13,7 @@ def random_timestamp(start: datetime , end : datetime) -> datetime :
     return start + timedelta(seconds=random_sec)
 
 
-def master_data_generator (n_accounts : int , n_transactions : int , n_days : int , fraud_probability : float) -> list :
+def master_data_generator (n_accounts : int , n_transactions : int , n_days : int , fraud_probability : float) -> list[Transaction] :
     
     if n_accounts < 2 :
         raise ValueError("At least two accounts are required for data generation")
@@ -74,7 +60,7 @@ def generate_healthy_transaction_data(n_transactions : int , n_accounts , start_
         amount = round(random.uniform(5 , 300) , 2)
         timestamp = random_timestamp(start_time , end_time)
 
-        tx = create_transaction(from_account , to_account , amount , timestamp , "transfer" , False )
+        tx = Transaction(from_account , to_account , amount , timestamp , "transfer" , False )
         transactions.append(tx)
     
     return transactions
@@ -91,7 +77,7 @@ def generate_repeated_fraudulent_data(n_transactions : int  , n_accounts : int ,
         
         amount = round(random.uniform(75 , 1000) , 2)
         timestamp = base_time + timedelta(minutes=random.randint(0, 30))
-        tx = create_transaction(chosen_from_account , chosen_to_account , amount , timestamp , "transaction" , True)
+        tx = Transaction(chosen_from_account , chosen_to_account , amount , timestamp , "transaction" , True)
         transactions.append(tx)
     
     return transactions 
@@ -109,7 +95,7 @@ def generate_largeamount_fraudulent_data( n_transactions : int , n_accounts : in
         while from_account == to_account  :
             to_account = random.randint(0, n_accounts - 1) 
 
-        tx = create_transaction(from_account , to_account , amount , timestamp , "transfer" , True)
+        tx = Transaction(from_account , to_account , amount , timestamp , "transfer" , True)
         transactions.append(tx)
     return transactions
 
