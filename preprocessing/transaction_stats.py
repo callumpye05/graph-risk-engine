@@ -9,10 +9,10 @@ def computeData (transaction_list : list ) :
     }
 
     for tx in transaction_list : 
-        u = tx["from_account"]
-        v = tx["to_account"]
-        ts = tx["timestamp"]
-        amt = tx["amount"]
+        u = tx.from_account
+        v = tx.to_account
+        ts = tx.timestamp
+        amt = tx.amount
 
         stats["out_amounts"][u].append(amt)
         stats["out_timestamps"][u].append(ts)
