@@ -3,18 +3,13 @@ import random
 from data.transaction import Transaction 
 from data.account import Account
 from data.account_role import AccountRole 
+from data.fraud_generators import FRAUD_GENERATORS , FRAUD_WEIGHTS
+from data.fraud_selection import choose_fraud_type
+from data.time_utilities import random_timestamp
 
 MIN_FRAUD_BURST = 5
 
 
-
-
-
-#helper method designed to create a timestamp from an interval passed in parameter
-def random_timestamp(start: datetime , end : datetime) -> datetime : 
-    delta = end - start 
-    random_sec = random.randint(0 , int(delta.total_seconds()))
-    return start + timedelta(seconds=random_sec)
 
 
 
@@ -48,10 +43,6 @@ def master_data_generator (n_accounts : int , n_transactions : int , n_days : in
         if acc.creation_time < end_time
     ]
 
-    
-
-    
-
     while len(transactions) < n_transactions : 
         if len(eligible_accounts) < 2:
             break
@@ -61,17 +52,15 @@ def master_data_generator (n_accounts : int , n_transactions : int , n_days : in
         if not is_fraud : 
             nb_tx_for_iteration = random.randint(1, max(1, remaining // 4))
             newTx = generate_healthy_transaction_data(nb_tx_for_iteration, eligible_accounts , start_time, end_time)
-        else : 
-            max_burst_possible = remaining // 8
-            if max_burst_possible < MIN_FRAUD_BURST  :
-                nb_tx_for_iteration = random.randint(1, max(1, remaining // 4))
-                newTx = generate_healthy_transaction_data(nb_tx_for_iteration, eligible_accounts, start_time, end_time)
+        else:
+            max_burst_possible = remaining //8
+            if max_burst_possible <MIN_FRAUD_BURST:
+                nb_tx_for_iteration = random.randint(1, max(1,remaining // 4))
+                newTx =generate_healthy_transaction_data(nb_tx_for_iteration,eligible_accounts,start_time,end_time)
             else:
-                burst_size = random.randint(MIN_FRAUD_BURST , max_burst_possible)
-                if random.random() < 1/3 :  
-                    newTx = generate_repeated_fraudulent_data(burst_size, eligible_accounts , start_time , end_time)
-                else : 
-                    newTx = generate_largeamount_fraudulent_data(burst_size , eligible_accounts , start_time , end_time  )
+                burst_size =random.randint(MIN_FRAUD_BURST, max_burst_possible)
+                fraud_generator = choose_fraud_type()
+                newTx = fraud_generator(burst_size,eligible_accounts,start_time,end_time)
 
         transactions.extend(newTx[:remaining]) 
 
@@ -100,46 +89,3 @@ def generate_healthy_transaction_data(n_transactions : int , accounts : list[Acc
         transactions.append(tx)
     return transactions
    
-def generate_repeated_fraudulent_data(n_transactions : int , accounts : list[Account], start_time : datetime , end_time : datetime) : 
-    
-    transactions = []
-    to_account = random.choice(accounts)
-    from_account = random.choice(accounts)
-
-    while to_account == from_account : 
-        to_account = random.choice(accounts)
-    
-    tx_start = max(start_time , to_account.creation_time , from_account.creation_time)
-    base_time = random_timestamp(tx_start,end_time - timedelta(minutes=30))
-    base_amount = random.uniform(200, 800)
-
-
-    for _ in range(n_transactions) :
-        amount = round(random.gauss(base_amount,base_amount *0.05), 2)
-        timestamp = base_time + timedelta(minutes=random.randint(0, 30))
-        tx = Transaction(from_account.account_id ,to_account.account_id, amount , timestamp , "transfer" , True)
-        transactions.append(tx)
-    
-    return transactions 
-
-def generate_largeamount_fraudulent_data( n_transactions : int , accounts : list[Account], start_time : datetime , end_time : datetime) :
-    
-    transactions = []
-    for _ in range(n_transactions) :
-
-        from_account = random.choice(accounts)
-        to_account = random.choice(accounts)
-        
-        while from_account == to_account  :
-            to_account = random.choice(accounts)
-        
-        base_amount = random.uniform(2000, 30000)
-        amount = round(random.gauss(base_amount, base_amount * 0.05), 2)
-        tx_start = max(start_time , from_account.creation_time , to_account.creation_time)
-        timestamp = random_timestamp(tx_start , end_time)
-
-        tx = Transaction(from_account.account_id ,to_account.account_id, amount , timestamp , "transfer" , True)
-        transactions.append(tx)
-    return transactions
-
-
