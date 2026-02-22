@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from heuristics.frequency import FrequencyHeuristic
-from preprocessing.transaction_stats import computeData
+from preprocessing.transaction_stats import compute_features
 
 
 
