@@ -1,4 +1,5 @@
 from collections import defaultdict
+import numpy as np
 
 
 def compute_features(transaction_list : list) : 
@@ -53,6 +54,16 @@ def compute_features(transaction_list : list) :
     return features
 
 
+
+def compute_global_out_amount_stats(features):
+    all_out_amounts = []
+    for node_stats in features["node"].values():
+        all_out_amounts.extend(node_stats["out_amounts"])
+    if not all_out_amounts:
+        return {"mean": 0.0, "std": 0.0}
+    mean = float(np.mean(all_out_amounts))
+    std = float(np.std(all_out_amounts))
+    return {"mean": mean, "std": std}
         
 
 
