@@ -11,7 +11,7 @@ from heuristics.high_amount import HighAmountHeuristic
 from data.transaction import Transaction as InternalTransaction
 from preprocessing.transaction_stats import compute_features
 from datetime import datetime, timedelta
-
+from database import db
 
 
 app = FastAPI(
@@ -47,9 +47,9 @@ def health_check():
 @app.post("/api/v1/score-batch")
 def score_transaction_batch(transactions: List[TransactionInput]):
     try:
-        # create Internal Transaction Objects
         internal_txs = []
         for tx in transactions:
+            db.add_transaction(from_id=tx.from_account,to_id=tx.to_account,amount=tx.amount,timestamp=tx.timestamp)
             internal_txs.append(
                 InternalTransaction(
                     from_account_id=tx.from_account,
@@ -61,7 +61,7 @@ def score_transaction_batch(transactions: List[TransactionInput]):
                 )
             )
 
-        #compute Features using your script
+        #compute Features using  script
         raw_features = compute_features(internal_txs)
 
         #global Stats for the HighAmountHeuristic
@@ -71,13 +71,13 @@ def score_transaction_batch(transactions: List[TransactionInput]):
             "std": float(np.std(all_amounts)) if all_amounts else 1.0
         }
 
-        #  flatten the stats for the heuristics
+        #flatten the stats for the heuristics
         formatted_stats = {
             "out_timestamps": {acc: data["timestamps"] for acc, data in raw_features["node"].items()},
             "out_amounts": {acc: data["out_amounts"] for acc, data in raw_features["node"].items()}
         }
 
-        #Initialize heuristics with the new params
+        #initialize heuristics with parameters
         heuristics_list = [
             FrequencyHeuristic(window_scale=timedelta(minutes=5), scale=10),
             HighAmountHeuristic(global_stats=global_stats, std_factor=2.0)
