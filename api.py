@@ -64,17 +64,18 @@ def score_transaction_batch(transactions: List[TransactionInput]):
         #compute Features using  script
         raw_features = compute_features(internal_txs)
 
-        #global Stats for the HighAmountHeuristic
-        all_amounts =[tx.amount for tx in internal_txs]
-        global_stats = {
-            "mean":float(np.mean(all_amounts)) if all_amounts else 0.0,
-            "std": float(np.std(all_amounts)) if all_amounts else 1.0
-        }
+        # global Stats for the HighAmountHeuristic
+        all_amounts = [tx.amount for tx in internal_txs]
+        
+        raw_std = float(np.std(all_amounts)) if all_amounts else 1.0
+        safe_std = raw_std if raw_std > 0.0 else 1.0
+        
+        global_stats = {"mean":float(np.mean(all_amounts)) if all_amounts else 0.0,"std":safe_std}
 
         #flatten the stats for the heuristics
         formatted_stats = {
             "out_timestamps": {acc: data["timestamps"] for acc, data in raw_features["node"].items()},
-            "out_amounts": {acc: data["out_amounts"] for acc, data in raw_features["node"].items()}
+            "out_amounts": {acc:data["out_amounts"] for acc, data in raw_features["node"].items()}
         }
 
         #initialize heuristics with parameters
@@ -86,10 +87,16 @@ def score_transaction_batch(transactions: List[TransactionInput]):
         #compute final scores
         results = compute_risk_scores(heuristics_list, formatted_stats)
 
+        
+        for account_id, score_data in results.items():
+            db.update_risk_score(account_id=account_id, risk_score=score_data["risk"])
+       
+
         return {
             "status": "success",
             "results": results
         }
+
 
     except Exception as e:
         import traceback

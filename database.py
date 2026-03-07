@@ -22,4 +22,17 @@ class GraphDB:
             """
             session.run(query, from_id=from_id, to_id=to_id, 
                         amount=amount, timestamp=str(timestamp))
+    
+    def update_risk_score(self, account_id: str, risk_score: float):
+        """Updates the risk_score property on an Account node."""
+        query = """
+        MERGE (a:Account {id: $account_id})
+        SET a.risk_score = $score
+        """
+        try:
+            with self.driver.session() as session:
+                session.run(query, account_id=account_id, score=risk_score)
+        except Exception as e:
+            print(f"Failed to update risk score for {account_id}: {e}")
+        
 db = GraphDB()
