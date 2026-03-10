@@ -53,19 +53,16 @@ class GraphDB:
             with self.driver.session() as session:
                 result = session.run(query, account_id=account_id, window_start=window_start)
                 record = result.single()
-
-                # If the user is brand new and has no history
                 if not record or record["avg_amount"] is None:
                     return {"avg_amount": 0.0, "std_amount": 1.0, "recent_count": 0}
                 
-                # Protect against nulls for single-transaction history
                 return {
                     "avg_amount": record["avg_amount"],
                     "std_amount": record["std_amount"] if record["std_amount"] is not None else 1.0,
                     "recent_count": record["recent_count"]
                 }
         except Exception as e:
-            print(f"❌ DB Error getting history for {account_id}: {e}")
+            print(f" DB Error getting history for {account_id}: {e}")
             return {"avg_amount": 0.0, "std_amount": 1.0, "recent_count": 0}
         
 db = GraphDB()

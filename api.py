@@ -9,9 +9,12 @@ from confluent_kafka import Producer
 
 app = FastAPI(title="Graph Risk Engine API - The Gateway",description="V2: A real-time data ingestion gateway pushing to Kafka",version="2.0.0")
 
-#KAFKA PRODUCER SETUP 
-#point it to 'kafka:29092' the internal Docker listener I built
-producer_config = {'bootstrap.servers': 'kafka:29092','client.id': 'fastapi-gateway','acks': '1'}
+#KAFKA prod config 
+producer_config = {
+    'bootstrap.servers': 'kafka:29092',
+    'client.id': 'fastapi-gateway',
+    'acks': '1'
+}
 
 try:
     producer = Producer(producer_config)
@@ -52,7 +55,6 @@ def score_transaction_batch(transactions: List[TransactionInput]):
             producer.produce(topic='incoming-transactions',value=tx_json.encode('utf-8'),callback=delivery_report)
             producer.poll(0)
         producer.flush()
-
         return {"status": "queued","message": f"Successfully pushed {len(transactions)} transactions to the Kafka stream.","queued_count": len(transactions)}
 
     except Exception as e:
