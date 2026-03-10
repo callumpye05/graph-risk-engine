@@ -6,5 +6,7 @@ class Heuristic(ABC) :
     def evaluate(self , account_id , stats) ->float:
         pass
 
+    
+
 
 

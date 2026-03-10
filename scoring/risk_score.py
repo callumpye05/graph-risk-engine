@@ -1,29 +1,22 @@
-from heuristics.frequency import FrequencyHeuristic
-from heuristics.high_amount import HighAmountHeuristic
-
-
-def compute_risk_scores(heuristics , stats ) -> dict : 
-    accounts = stats["out_timestamps"].keys()
-    results = {}
+def compute_single_risk_score(amount_brain, freq_brain, current_amount: float, history: dict) -> dict:
+    """
+    Takes the max risk score (loudest alarm wins).
+    """
+    amount_risk = amount_brain.evaluate(current_amount, history)
+    freq_risk = freq_brain.evaluate(history)
     
-    for acc in accounts :
-
-        signals= {}
-        for heuristic in heuristics : 
-            signal = heuristic.evaluate(acc,stats)
-            signals[heuristic.__class__.__name__] = signal 
-        
-        if signals : 
-            risk = sum(signals.values()) / len(signals)
-        else : 
-            risk = 0.0
-        results[acc] = {
-            "risk": risk,
-            "signals": signals
-        }
+    signals = {
+        "HighAmountHeuristic": amount_risk,
+        "FrequencyHeuristic": freq_risk
+    }
     
-    return results
- 
+    # choose the biggest of the two ,  any suspicious behaviour should be flagged
+    final_risk = max(signals.values())
+    
+    return {
+        "risk": final_risk,
+        "signals": signals
+    }
 
             
 

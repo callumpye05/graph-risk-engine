@@ -1,68 +1,61 @@
+import pytest
 from heuristics.high_amount import HighAmountHeuristic
 
-
-
-def make_heuristic(mean=100.0, std=20.0, std_factor=2.0):
-    global_stats = {"mean": mean, "std": std}
-    return HighAmountHeuristic(global_stats, std_factor=std_factor)
-
-def test_high_amount_no_transactions():
-    stats = {
-        "out_amounts": {}
-    }
-    heuristic = make_heuristic()
-    score = heuristic.evaluate(account_id=1, stats=stats)
-    assert score == 0.0
+def test_high_amount_above_threshold():
+    
+    heuristic = HighAmountHeuristic(std_threshold=3.0)
+    
+    history = {"avg_amount": 100.0, "std_amount": 10.0, "recent_count": 5}
+    
+   
+    score = heuristic.evaluate(200.0, history)
+    assert score == 1.0
 
 def test_high_amount_below_mean():
-    stats = {
-        "out_amounts": {
-            1: [50]
-        }
-    }
-    heuristic = make_heuristic()
-    score = heuristic.evaluate(account_id=1, stats=stats)
-    assert score == 0.0
+    heuristic = HighAmountHeuristic(std_threshold=3.0)
+    history = {"avg_amount": 100.0,"std_amount": 10.0, "recent_count": 5}
+    
+    score = heuristic.evaluate(105.0, history)
+    assert score <= 0.2
 
-def test_high_amount_at_threshold():
-    stats = {
-        "out_amounts": {
-            1: [140]  # mean + 2*std = 100 + 2*20 = 140
-        }
-    }
-    heuristic = make_heuristic()
-    score = heuristic.evaluate(account_id=1, stats=stats)
-    assert score == 1.0
 
-def test_high_amount_above_threshold():
-    stats = {
-        "out_amounts": {
-            1: [200]
-        }
-    }
-    heuristic = make_heuristic()
-    score = heuristic.evaluate(account_id=1, stats=stats)
-    assert score == 1.0
+def test_high_amount_suspicious_middle():
+    """Test the linear scaling when z-score is between 1.0 and the threshold."""
+    heuristic = HighAmountHeuristic(std_threshold=3.0)
+    history = {"avg_amount": 100.0, "std_amount": 10.0, "recent_count": 5}
+    
+    score = heuristic.evaluate(120.0, history)
+    
+    assert 0.6 < score < 0.7 
 
-def test_high_amount_between_mean_and_threshold():
-    stats = {
-        "out_amounts": {
-            1: [120]  # between mean (100) and threshold (140)
-        }
-    }
-    heuristic = make_heuristic()
-    score = heuristic.evaluate(account_id=1, stats=stats)
-    assert 0.0 < score < 1.0
+def test_high_amount_exactly_at_threshold():
+    """Test the exact boundary condition."""
+    heuristic = HighAmountHeuristic(std_threshold=3.0)
+    history = {"avg_amount": 100.0, "std_amount": 10.0, "recent_count": 5}
+    
+    score = heuristic.evaluate(130.0, history)
+    
+    assert score == 0.9 
 
-def test_high_amount_score_bounds():
-    stats = {
-        "out_amounts": {
-            1: [1, 10, 100]
-        }
-    }
-    heuristic = make_heuristic()
-    score = heuristic.evaluate(account_id=1, stats=stats)
-    assert 0.0 <= score <= 1.0
+def test_high_amount_zero_std_protection():
+    """Prove the engine doesn't crash with a ZeroDivisionError if history is identical."""
+    heuristic = HighAmountHeuristic(std_threshold=3.0)
+    history = {"avg_amount": 50.0, "std_amount": 0.0, "recent_count": 5}
+    
+   
+    score = heuristic.evaluate(53.0, history)
+    
+    assert score == 0.9 
+
+def test_high_amount_under_spender():
+    """Prove that spending WAY less than usual doesn't trigger fraud."""
+    heuristic = HighAmountHeuristic(std_threshold=3.0)
+    history = {"avg_amount": 1000.0, "std_amount": 100.0, "recent_count": 5}
+    
+    score = heuristic.evaluate(2.0, history)
+    
+    assert score == 0.1 
+
 
 
 

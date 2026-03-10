@@ -11,6 +11,7 @@ from heuristics.high_amount import HighAmountHeuristic
 from data.transaction import Transaction as InternalTransaction
 from preprocessing.transaction_stats import compute_features
 from database import db
+from scoring.risk_score import compute_single_risk_score
 
 
 print(" Activating Engine worker..")
@@ -27,67 +28,35 @@ consumer.subscribe(['incoming-transactions'])
 print("listening to topic [incoming-transactions]...")
 
 
+amount_brain = HighAmountHeuristic(std_threshold=3.0)
+freq_brain = FrequencyHeuristic(max_tx_per_hour=5)
+
 def process_batch(messages):
-    """ run the V1 Heuristics on a smaller batvh of messages from Kafka """
-    transactions_data = []
-    for msg in messages:
-        if msg.error():
-            continue
-        #decode to string then parse json
-        raw_data = json.loads(msg.value().decode('utf-8'))
-        transactions_data.append(raw_data)
-
-    if not transactions_data:
-        return
-
-    try:
-        internal_txs = []
-        # add to Neo4j and format for the  Engine
-        for tx in transactions_data:
-            db.add_transaction(from_id=tx['from_account'],to_id=tx['to_account'],amount=tx['amount'],timestamp=tx['timestamp'])
-            internal_txs.append(
-                InternalTransaction(from_account_id=tx['from_account'],to_account_id=tx['to_account'],amount=tx['amount'],timestamp=datetime.fromtimestamp(tx['timestamp']),tx_type=tx['tx_type'],is_fraud=bool(tx.get('is_fraud', 0)))
-            )
-
-        #math same as before
-        raw_features =compute_features(internal_txs)
-        all_amounts = [tx.amount for tx in internal_txs]
-        raw_std =float(np.std(all_amounts)) if all_amounts else 1.0
-        safe_std = raw_std if raw_std > 0.0 else 1.0
-        global_stats ={"mean": float(np.mean(all_amounts)) if all_amounts else 0.0, "std": safe_std}
-
-        formatted_stats = {
-            "out_timestamps":{acc: data["timestamps"] for acc, data in raw_features["node"].items()},"out_amounts": {acc: data["out_amounts"] for acc, data in raw_features["node"].items()}
-            }
-
-        heuristics_list = [
-            FrequencyHeuristic(window_scale=timedelta(minutes=5), scale=10),HighAmountHeuristic(global_stats=global_stats, std_factor=2.0)
-        ]
-
-        results =compute_risk_scores(heuristics_list, formatted_stats)
-
+    transactions_data = [json.loads(m.value().decode('utf-8')) for m in messages if not m.error()]
     
-        for account_id, score_data in results.items():
-            db.update_risk_score(account_id=account_id, risk_score=score_data["risk"])
+    for tx in transactions_data:
+        account_id = tx['from_account']
+        current_amount = tx['amount']
+        current_time = tx['timestamp']
 
-        print(f" Scored and stored micro-batch of {len(transactions_data)} transactions.")
+        #read first to prevent fraudsters slipping under the radar 
+        history = db.get_account_history(account_id, current_time)
+        amount_risk = amount_brain.evaluate(current_amount, history)
+        freq_risk =freq_brain.evaluate(history)
+        final_risk = compute_single_risk_score(amount_brain, freq_brain, current_amount, history)
+        db.update_risk_score(account_id, final_risk)
+        db.add_transaction(account_id,tx['to_account'], current_amount, current_time)
 
-    except Exception as e:
-        import traceback
-        print(f" Worker Error processing batch: {e}")
-        print(traceback.format_exc())
+        print(f" Scored {account_id} |Risk: {final_risk:.2f} |(AmtRisk: {amount_risk:.2f}, FreqRisk:{freq_risk:.2f})")
 
-#infinite loop
+#the loop
 try:
     while True:
-        # Ask for 100 msgs 
         msgs = consumer.consume(num_messages=100, timeout=1.0)
         if msgs is None or len(msgs) == 0:
             continue 
-            
         process_batch(msgs)
 except KeyboardInterrupt:
-    print("Stopping worker...")
+    print("Stopping worker")
 finally:
-    
     consumer.close()
