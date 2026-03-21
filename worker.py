@@ -56,8 +56,21 @@ consumer.subscribe(['incoming-transactions'])
 amount_brain = HighAmountHeuristic(std_threshold=3.0)
 freq_brain = FrequencyHeuristic(max_tx_per_hour=5)
 
+def get_optimized_threshold():
+    try:
+        # Ask Redis for the number Julia pushed
+        val = redis_client.get("config:std_threshold")
+        if val:
+            return float(val)
+    except Exception:
+        pass
+    return 3.0
+
 def process_batch(messages):
     transactions_data = [json.loads(m.value().decode('utf-8')) for m in messages if not m.error()]
+
+    current_threshold = get_optimized_threshold()
+    amount_brain.std_threshold = current_threshold
     
     for tx in transactions_data:
         account_id =tx['from_account']
