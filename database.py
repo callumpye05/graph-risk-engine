@@ -13,15 +13,15 @@ class GraphDB:
     def close(self):
         self.driver.close()
 
-    def add_transaction(self, from_id, to_id, amount, timestamp):
+    def add_transaction(self, from_id, to_id, amount, timestamp , is_fraud=0):
         with self.driver.session() as session:
             query = """
             MERGE (a:Account {id: $from_id})
             MERGE (b:Account {id: $to_id})
-            CREATE (a)-[:TRANSFERRED_TO {amount: $amount, time: $timestamp}]->(b)
+            CREATE (a)-[:TRANSFERRED_TO {amount: $amount, time: $timestamp , is_fraud: $is_fraud}]->(b)
             """
             session.run(query, from_id=from_id, to_id=to_id, 
-                        amount=amount, timestamp=str(timestamp))
+                        amount=amount, timestamp=str(timestamp), is_fraud=is_fraud)
     
     def update_risk_score(self, account_id: str, risk_score: float):
         """Updates the risk_score property on an Account node."""
@@ -47,7 +47,7 @@ class GraphDB:
         RETURN 
             avg(r.amount) AS avg_amount, 
             stDev(r.amount) AS std_amount,
-            sum(CASE WHEN r.timestamp >= $window_start THEN 1 ELSE 0 END) AS recent_count
+            sum(CASE WHEN r.time >= $window_start THEN 1 ELSE 0 END) AS recent_count
         """
         try:
             with self.driver.session() as session:

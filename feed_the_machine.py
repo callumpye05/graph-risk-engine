@@ -7,7 +7,7 @@ import requests
 
 API_URL = "http://localhost:8000/api/v1/score-batch"
 
-NUM_TRANSACTIONS = 1000
+NUM_TRANSACTIONS = 800
 print("Generating synthetic transaction data")
 
 transactions = []
@@ -20,14 +20,23 @@ for i in range(NUM_TRANSACTIONS):
     while receiver == sender:
         receiver =f"ACC_USER_{random.randint(1, 200)}"
 
-    tx = {"from_account":sender,"to_account": receiver,"amount": round(random.uniform(10.0, 500.0), 2), "timestamp": base_time + (i * 3600),"tx_type": "TRANSFER","is_fraud": 0}
+    tx = {"from_account":sender,"to_account": receiver,"amount": round(random.uniform(10.0, 400.0), 2), "timestamp": base_time + (i * 3600),"tx_type": "TRANSFER","is_fraud": 0}
     transactions.append(tx)
 
-fraud_accounts = ["ACC_DIRTY_1", "ACC_DIRTY_2","ACC_DIRTY_3", "ACC_DIRTY_4", "ACC_DIRTY_5"]
-for i in range(5):
-    tx = {"from_account": fraud_accounts[i], "to_account": fraud_accounts[(i + 1) % 5],"amount": 9900.0, "timestamp": base_time + (NUM_TRANSACTIONS * 3600) + (i * 10), "tx_type": "TRANSFER","is_fraud": 1}
+fraud_accounts = ["ACC_DIRTY_1", "ACC_DIRTY_2","ACC_DIRTY_3", "ACC_DIRTY_4", "ACC_DIRTY_5","ACC_DIRTY_6", "ACC_DIRTY_7","ACC_DIRTY_8", "ACC_DIRTY_9", "ACC_DIRTY_10"]
+for i in range(10):
+    tx = {"from_account": fraud_accounts[i], "to_account": fraud_accounts[(i + 1) % 5],"amount": 2500.0, "timestamp": base_time + (NUM_TRANSACTIONS * 3600) + (i * 10), "tx_type": "TRANSFER","is_fraud": 1}
     transactions.append(tx)
 
+for i in range(200):
+    sender =f"ACC_USER_{random.randint(1,200)}"
+    receiver = f"ACC_USER_{random.randint(1, 200)}"
+    
+    while receiver == sender:
+        receiver =f"ACC_USER_{random.randint(1, 200)}" 
+
+    tx = {"from_account":sender,"to_account": receiver,"amount": 1350.0, "timestamp": base_time + (i * 3600),"tx_type": "TRANSFER","is_fraud": 0}
+    transactions.append(tx)
 
 random.shuffle(transactions)
 batch_size =100

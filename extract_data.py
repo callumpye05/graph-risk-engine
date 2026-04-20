@@ -5,19 +5,20 @@ from database import db
 
 def export_tx_tocsv(filename="training_data.csv"):
     query = """
-    MATCH (a:Account)-[r:TRANSFERRED_TO]->(b:Account)
-    WITH a,r, b, toInteger(r.time) AS tx_time
+    MATCH  (a:Account)-[r:TRANSFERRED_TO]->(b:Account)
+    WITH a,r, toInteger(r.time) AS tx_time
     OPTIONAL MATCH (a)-[recent:TRANSFERRED_TO]->()
-    WHERE toInteger(recent.time)< tx_time 
-    AND toInteger(recent.time) >(tx_time -3600)
+    WHERE toInteger(recent.time) <tx_time 
+      AND toInteger(recent.time) >(tx_time -3600)
     RETURN 
         a.id AS account_id, 
         r.amount AS amount, 
         r.time AS timestamp,
-        count(recent) AS tx_count_1h
-    LIMIT 1000
+        count(recent) AS tx_count_1h,
+        coalesce(r.is_fraud, 0) AS is_fraud
+    ORDER BY timestamp DESC  
+    LIMIT 5000
     """
-
     try: 
         with db.driver.session() as session:
             result = session.run(query)
@@ -32,9 +33,9 @@ def export_tx_tocsv(filename="training_data.csv"):
                 writer.writerow(fieldnames)
 
                 for record in records:
-                    amt = float(record['amount'])
-                    is_fraud = 1 if amt > 800 else 0
-                    writer.writerow([record['account_id'], amt,record['timestamp'], is_fraud, record['tx_count_1h']])
+                    amt =float(record['amount'])
+                    true_label =record['is_fraud']
+                    writer.writerow([record['account_id'], amt,record['timestamp'], true_label, record['tx_count_1h']])
         print(f"Exported {len(records)} transactions to {filename}")
     except Exception as e:
         print(f"error exporting transactions: {e}")

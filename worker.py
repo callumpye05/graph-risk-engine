@@ -9,6 +9,11 @@ from database import db
 from scoring.risk_score import compute_single_risk_score
 import redis
 import os
+import subprocess
+
+#learning variables
+TRANSACTION_COUNTER = 0
+LEARNING_BATCH_SIZE = 1000
 
 print(" Activating Engine worker..")
 
@@ -67,37 +72,57 @@ def get_optimized_threshold():
     return 3.0
 
 def process_batch(messages):
-    transactions_data = [json.loads(m.value().decode('utf-8')) for m in messages if not m.error()]
+    global TRANSACTION_COUNTER #Python has to use our gloabl tracker
 
-    current_threshold = get_optimized_threshold()
+    transactions_data =[json.loads(m.value().decode('utf-8')) for m in messages if not m.error()]
+
+    #get info from optimizer first 
+    current_threshold =get_optimized_threshold()
     amount_brain.std_threshold = current_threshold
     
     for tx in transactions_data:
-        account_id =tx['from_account']
-        current_amount = tx['amount']
-        current_time =tx['timestamp']
-        
-        #ask cache directly first 
-        history =get_cached_account_history(account_id, current_time)
+        account_id = tx['from_account']
+        current_amount =tx['amount']
+        current_time = tx['timestamp']
+        is_fraud = tx.get('is_fraud' , 0)
+
+
+        history = get_cached_account_history(account_id, current_time)
         amount_risk = amount_brain.evaluate(current_amount, history)
-        freq_risk = freq_brain.evaluate(history)
+        freq_risk =freq_brain.evaluate(history)
         risk_results =compute_single_risk_score(amount_brain, freq_brain, current_amount, history)
         final_risk =risk_results['risk'] 
         
-        #update Neo4j
-        db.update_risk_score(account_id, final_risk)
-        db.add_transaction(account_id, tx['to_account'],current_amount, current_time)
+        db.update_risk_score(account_id,final_risk)
+        db.add_transaction(account_id, tx['to_account'], current_amount,current_time , is_fraud)
 
         print(f"Scored {account_id} | Risk: {final_risk:.2f} | (AmtRisk: {amount_risk:.2f}, FreqRisk: {freq_risk:.2f})")
 
-#The loop
+    TRANSACTION_COUNTER += len(transactions_data)
+    
+    #new data means new calculatons for optimization
+    if TRANSACTION_COUNTER >= LEARNING_BATCH_SIZE:
+        print(f"\n {LEARNING_BATCH_SIZE} entries reached. Let Neo4j finish writing.")
+        time.sleep(2)
+        try:
+            print("Launching Optimizer.")
+            subprocess.run("python extract_data.py", shell=True)
+            subprocess.run("docker exec fraud-optimizer julia or_optimization/optimize.jl", shell=True)
+        except Exception as e:
+            print(f"Failed to trigger optimizer: {e}")
+            
+        #reset for next learning cycle 
+        TRANSACTION_COUNTER = 0
+
+#loop
 try:
+    print("worker is live ,listening for transactions and ready to learn")
     while True:
         msgs = consumer.consume(num_messages=100, timeout=1.0)
-        if msgs is None or len(msgs) == 0:
+        if msgs is None or len(msgs) ==0:
             continue 
         process_batch(msgs)
 except KeyboardInterrupt:
-    print(" Stopping worker..")
+    print("Halting")
 finally:
     consumer.close()
