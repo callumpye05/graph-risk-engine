@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+
+
+body {
+  background-color: #0f172a; /* A deep, executive slate blue/black */
+  color: #f8fafc;
+}
