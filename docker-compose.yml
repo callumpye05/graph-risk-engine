@@ -54,7 +54,9 @@ services:
       - "6379:6379"
   
   optimizer:
-    image: julia:1.9
+    build: 
+      context: .
+      dockerfile: Dockerfile.julia
     container_name: fraud-optimizer
     volumes:
       - .:/app  

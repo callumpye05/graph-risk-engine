@@ -63,7 +63,7 @@ freq_brain = FrequencyHeuristic(max_tx_per_hour=5)
 
 def get_optimized_threshold():
     try:
-        # Ask Redis for the number Julia pushed
+        #ask redis number julia pushed
         val = redis_client.get("config:std_threshold")
         if val:
             return float(val)
@@ -72,7 +72,7 @@ def get_optimized_threshold():
     return 3.0
 
 def process_batch(messages):
-    global TRANSACTION_COUNTER #Python has to use our gloabl tracker
+    global TRANSACTION_COUNTER 
 
     transactions_data =[json.loads(m.value().decode('utf-8')) for m in messages if not m.error()]
 
@@ -96,17 +96,34 @@ def process_batch(messages):
         db.update_risk_score(account_id,final_risk)
         db.add_transaction(account_id, tx['to_account'], current_amount,current_time , is_fraud)
 
+
+        live_result ={
+            "account_id": account_id,
+            "to_account" :tx['to_account'],
+            "amount": current_amount,
+            "risk": final_risk,
+            "timestamp": current_time,
+            "amt_risk":amount_risk,
+            "freq_risk" : freq_risk,
+            "is_fraud_label":is_fraud,
+            "current_threshold": current_threshold
+        }
+        try:
+            redis_client.publish("live_transactions",json.dumps(live_result))
+        except Exception as e:
+            pass
+
         print(f"Scored {account_id} | Risk: {final_risk:.2f} | (AmtRisk: {amount_risk:.2f}, FreqRisk: {freq_risk:.2f})")
 
     TRANSACTION_COUNTER += len(transactions_data)
     
     #new data means new calculatons for optimization
     if TRANSACTION_COUNTER >= LEARNING_BATCH_SIZE:
-        print(f"\n {LEARNING_BATCH_SIZE} entries reached. Let Neo4j finish writing.")
+        print(f"\n {LEARNING_BATCH_SIZE} entries reached, let Neo4j finish writing")
         time.sleep(2)
         try:
             print("Launching Optimizer.")
-            subprocess.run("python extract_data.py", shell=True)
+            subprocess.run("python extract_data.py",shell=True)
             subprocess.run("docker exec fraud-optimizer julia or_optimization/optimize.jl", shell=True)
         except Exception as e:
             print(f"Failed to trigger optimizer: {e}")

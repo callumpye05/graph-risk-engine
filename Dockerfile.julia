@@ -1,0 +1,15 @@
+
+FROM julia:1.9
+
+#set working environment
+WORKDIR /app
+
+#install criticial packages during build phase
+RUN julia -e '\
+    using Pkg; \
+    Pkg.add(["JuMP", "GLPK", "Redis", "JSON", "CSV", "DataFrames"]); \
+    Pkg.precompile(); \
+    print(" Julia Packages Locked."); \
+'
+
+CMD ["tail", "-f","/dev/null"]
