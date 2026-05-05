@@ -1,6 +1,6 @@
 from data.fraud_type import FraudType 
 import random
-from data.account import Account
+from data.base_account import Account
 from datetime import datetime,timedelta
 from data.transaction import Transaction
 from data.time_utilities import random_timestamp

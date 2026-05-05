@@ -1,7 +1,7 @@
 from datetime import datetime,timedelta
 import random
 from data.transaction import Transaction 
-from data.account import Account
+from data.base_account import Account
 from data.account_role import AccountRole 
 from data.fraud_generators import FRAUD_GENERATORS , FRAUD_WEIGHTS
 from data.fraud_selection import choose_fraud_type
