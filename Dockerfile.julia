@@ -1,10 +1,10 @@
 
 FROM julia:1.9
 
-#set working environment
+
 WORKDIR /app
 
-#install criticial packages during build phase
+#critical packages during build phase
 RUN julia -e '\
     using Pkg; \
     Pkg.add(["JuMP", "GLPK", "Redis", "JSON", "CSV", "DataFrames"]); \

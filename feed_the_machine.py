@@ -1,55 +1,44 @@
-import random
+import json
 import time
-import requests
+from kafka import KafkaProducer
+from data.master_generator import run_simulation
 
+#Initialize kafka
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
 
+TOPIC_NAME ="incoming-transactions"
 
-
-API_URL = "http://localhost:8000/api/v1/score-batch"
-
-NUM_TRANSACTIONS = 800
-print("Generating synthetic transaction data")
-
-transactions = []
-base_time = 1709751600.0
-
-for i in range(NUM_TRANSACTIONS):
-    sender =f"ACC_USER_{random.randint(1,200)}"
-    receiver = f"ACC_USER_{random.randint(1, 200)}"
+def execute_chaos_pipeline():
+    print("Initiating Data Engine ")
+    raw_dataset = run_simulation(days=1)
     
-    while receiver == sender:
-        receiver =f"ACC_USER_{random.randint(1, 200)}"
-
-    tx = {"from_account":sender,"to_account": receiver,"amount": round(random.uniform(10.0, 400.0), 2), "timestamp": base_time + (i * 3600),"tx_type": "TRANSFER","is_fraud": 0}
-    transactions.append(tx)
-
-fraud_accounts = ["ACC_DIRTY_1", "ACC_DIRTY_2","ACC_DIRTY_3", "ACC_DIRTY_4", "ACC_DIRTY_5","ACC_DIRTY_6", "ACC_DIRTY_7","ACC_DIRTY_8", "ACC_DIRTY_9", "ACC_DIRTY_10"]
-for i in range(10):
-    tx = {"from_account": fraud_accounts[i], "to_account": fraud_accounts[(i + 1) % 5],"amount": 2500.0, "timestamp": base_time + (NUM_TRANSACTIONS * 3600) + (i * 10), "tx_type": "TRANSFER","is_fraud": 1}
-    transactions.append(tx)
-
-for i in range(200):
-    sender =f"ACC_USER_{random.randint(1,200)}"
-    receiver = f"ACC_USER_{random.randint(1, 200)}"
+    #secure the truth
+    truth_file = "v2_ground_truth.json"
+    with open(truth_file, "w") as f:
+        json.dump(raw_dataset, f, indent=4)
+    print(f" Ground Truth secured in {truth_file}. (Total: {len(raw_dataset)} records)")
     
-    while receiver == sender:
-        receiver =f"ACC_USER_{random.randint(1, 200)}" 
-
-    tx = {"from_account":sender,"to_account": receiver,"amount": 1350.0, "timestamp": base_time + (i * 3600),"tx_type": "TRANSFER","is_fraud": 0}
-    transactions.append(tx)
-
-random.shuffle(transactions)
-batch_size =100
-print(f" Injecting {len(transactions)} transactions into the Engine")
-
-for i in range(0, len(transactions), batch_size):
-    batch = transactions[i:i + batch_size]
-    response = requests.post(API_URL, json=batch)
+    print("\n Initiating Live Stream to Kafka")
     
-    if response.status_code == 200:
-        print(f" Batch {i//batch_size +1} injected successfully")
-    else:
-        print(f" Error in the batch: {response.text}")
-        break
+    #sanitize and stream
+    for tx in raw_dataset:
+        #create a copy of the transaction so we don't destroylocal data
+        sanitized_tx = tx.copy()
+        
+        #rip the label out
+        if "is_fraud" in sanitized_tx:
+            del sanitized_tx["is_fraud"]
+            
+        producer.send(TOPIC_NAME, sanitized_tx)
+        
+        #micro-sleep to simulate realtime 
+        time.sleep(0.01) 
+        
+    producer.flush()
+    print("All transactions deployed to the network, the board is live.")
 
-print("Injection complete")
+if __name__ == "__main__":
+    execute_chaos_pipeline()
