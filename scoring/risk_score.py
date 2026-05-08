@@ -1,25 +1,35 @@
-def compute_single_risk_score(amount_brain, freq_brain, current_amount: float, history: dict) -> dict:
+def synthesize_risk_profile(matrix_results: dict) -> dict:
     """
-    Takes the max risk score (loudest alarm wins).
+    translates the raw mathematical risk into a human readable intelligence profile
     """
-    amount_risk = amount_brain.evaluate(current_amount, history)
-    freq_risk = freq_brain.evaluate(history)
+    raw_risk = matrix_results.get("risk", 0.0)
     
-    signals = {
-        "HighAmountHeuristic": amount_risk,
-        "FrequencyHeuristic": freq_risk
+    #threat labelling
+    if raw_risk >= 0.85:
+        threat_level = "CRITICAL"
+        action = "FREEZE"
+    elif raw_risk >= 0.60:
+        threat_level = "SEVERE"
+        action = "MANUAL_REVIEW"
+    elif raw_risk >= 0.30:
+        threat_level = "ELEVATED"
+        action = "MONITOR"
+    else:
+        threat_level = "SAFE"
+        action = "ALLOW"
+
+    #Construct profile for the UI
+    profile = {
+        "final_risk": raw_risk,
+        "threat_level": threat_level,
+        "recommended_action": action,
+        #xe pass through the specific component scores so the human analyst 
+        #knows exactly why the alarm is ringing.
+        "components": {
+            "spike_score": matrix_results.get("spike_score", 0.0),
+            "pass_through_score": matrix_results.get("pass_through_score", 0.0),
+            "volume_score": matrix_results.get("volume_score", 0.0)
+        }
     }
     
-    # choose the biggest of the two ,  any suspicious behaviour should be flagged
-    final_risk = max(signals.values())
-    
-    return {
-        "risk": final_risk,
-        "signals": signals
-    }
-
-            
-
-
-
-
+    return profile

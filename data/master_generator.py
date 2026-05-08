@@ -12,14 +12,13 @@ def generate_account_id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:6].upper()}"
 
 def run_simulation(days: int = 7):
-    print("--- ⚙️ Initializing the Chaos Engine ---")
+    print("Initializing data engine")
     
-    # 1. POPULATING THE BOARD
-    # We create a massive legitimate baseline to hide the microscopic fraud signals.
+    #create an ecosystem
     ecosystem = []
     start_time = datetime.now() - timedelta(days=days)
     
-    print("Spawning legitimate ecosystem...")
+    print("making legitimate ecosystem...")
     for _ in range(1000):
         ecosystem.append(RetailPersona(generate_account_id("RET"), start_time))
     
@@ -29,7 +28,7 @@ def run_simulation(days: int = 7):
     for _ in range(5):
         ecosystem.append(CorporatePersona(generate_account_id("CORP"), start_time))
 
-    print("Infiltrating threat actors...")
+    print("creating threat actors...")
     for _ in range(10):
         ecosystem.append(SmurfBot(generate_account_id("SMRF"), start_time))
         
@@ -37,7 +36,7 @@ def run_simulation(days: int = 7):
         ecosystem.append(BlitzNode(generate_account_id("BLTZ"), start_time))
 
     
-    #instantiate the relays and manually link them into a blind circle.
+    #instantiate the relays and manually link them into a blind circle
     ring_size =5
     relays =[ObfuscationRelay(generate_account_id("TUMB"), start_time) for _ in range(ring_size)]
     
@@ -48,7 +47,7 @@ def run_simulation(days: int = 7):
     #inject initial illicit capital
     relays[0].balance +=75000.0 
     
-    # Add the hidden ring to the general ecosystem
+    
     ecosystem.extend(relays)
     print(f"Starting clock ({days} Days)")
     current_time =start_time
