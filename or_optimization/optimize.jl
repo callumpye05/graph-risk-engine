@@ -1,50 +1,80 @@
 using JuMP, GLPK, CSV, DataFrames, Statistics, Redis
+#the goal is to minimise the amount of FP's whilst also maximising the amount of fraud caught, by optimally tuning the thresholds of the V2 matrix rules
+println(" #### Starting Matrix Optimizer ####")
 
-# --- 1. Load the Data ---
-df =CSV.read("training_data.csv", DataFrame)
+df = CSV.read("training_data.csv", DataFrame)
 N = nrow(df)
-avg_amt =mean(df.amount)
-std_amt = std(df.amount)
-M =10000 
+M = 1000000.0 
 
-model = Model(GLPK.Optimizer)
+#pre compute to keep things linear
+daily_avg =zeros(Float64, N)
+pass_through_ratio =zeros(Float64, N)
 
-# --- 2. Decision Variables ---
-@variable(model, 1.0 <= theta_amt <= 5.0)   # Amount Threshold
-@variable(model, 1.0 <= theta_freq <= 10.0) # Max tx per hour
-@variable(model, flagged[1:N], Bin)         # Overall Flag
-
-#big m constraints
 for i in 1:N
-    #flag if amount >(mean + theta_amt *std)
-    @constraint(model, df.amount[i] >= (avg_amt +theta_amt *std_amt) - M *(1 - flagged[i]))
+    pure_29d_out =max(0.0, df.total_out_30d[i] -df.total_out_24h[i])
+    #enforce a minmum floor
+    daily_avg[i]= max(50.0, pure_29d_out /29.0)
     
-    #flag if tx_count_1h >theta_freq
-    @constraint(model, df.tx_count_1h[i] >= theta_freq - M *(1 - flagged[i]))
+    #calculate pass through safely 
+    if df.total_in_24h[i] >0
+        pass_through_ratio[i] = df.total_out_24h[i] / df.total_in_24h[i]
+    else
+        pass_through_ratio[i] =0.0
+    end
 end
 
-#maximise true positives 
+#linear solver
+model =Model(GLPK.Optimizer)
+
+#decision variables
+@variable(model, 2.0 <= theta_spike<=15.0)    #sleeper cell spike multiplier
+@variable(model,0.70<= theta_pt <= 1.0)       #pass-through threshold, 70% to 100%
+@variable(model,flag_spike[1:N], Bin)          #Spike Rule
+@variable(model, flag_pt[1:N],Bin)             #pass-through Rule
+@variable(model,flagged[1:N], Bin)             #final overall decision
+
+#constraints
+for i in 1:N
+    #flag_spike can only be 1 if 24h volume  >(daily average *optimal multiplier)
+    @constraint(model,df.total_out_24h[i] >= (daily_avg[i] *theta_spike) - M * (1 - flag_spike[i]))
+    
+    #flag_pt can only be 1 if pass through ratio >=optimal threshold
+    # add a volume floor (5000) to match the Python logic so we don't optimize on $10 transactions
+    if df.total_out_24h[i] > 5000.0
+        @constraint(model, pass_through_ratio[i] >= theta_pt - M * (1 - flag_pt[i]))
+    else
+        @constraint(model,flag_pt[i]==0)
+    end
+    
+    #Overall flag Logic 
+    @constraint(model, flagged[i] <= flag_spike[i] + flag_pt[i])
+end
+
+#Objectives
+#maximize the number of actual rackets/bots caught
 @objective(model, Max, sum(df.is_fraud[i] * flagged[i] for i in 1:N))
 
-# force a 1% false positive rate 
-@constraint(model, sum((1 - df.is_fraud[i]) * flagged[i] for i in 1:N) <= 0.01 * N)
+#force a strict FP rate (<=1% collateral damage to legitimate retail users)
+@constraint(model,sum((1 - df.is_fraud[i]) *flagged[i] for i in 1:N) <= 0.01 * N)
 
+println("Optimizing The Matrix Thresholds...")
 optimize!(model)
 
-#result & redis
-opt_amt =value(theta_amt)
-opt_freq = value(theta_freq)
+#export
+opt_spike = value(theta_spike)
+opt_pt = value(theta_pt)
 
-println("--- Solver Intel ---")
-println("Optimal Amount Threshold: ",opt_amt)
-println("Optimal Frequency Limit: ",opt_freq)
+println("#### Solver Findings ####")
+println("Optimal Spike Multiplier: ", round(opt_spike, digits=2), "x")
+println("Optimal Pass Through Threshold: ",round(opt_pt, digits=2))
 
 try
-    redis_host = get(ENV, "REDIS_HOST","redis")
+    redis_host = get(ENV, "REDIS_HOST", "redis")
     conn = RedisConnection(host=redis_host, port=6379)
-    set(conn, "config:std_threshold",string(opt_amt))
-    set(conn, "config:max_tx_per_hour",string(opt_freq))
-    println("Intelligence pushed to Redis successfully")
+    set(conn,"config:std_threshold", string(opt_spike)) 
+    set(conn,"config:pass_through_threshold", string(opt_pt))
+    
+    println("information pushed to Redis successfully")
 catch e
-    println("⚠️ Redis connection failed")
+    println("redis connection failed: ", e)
 end

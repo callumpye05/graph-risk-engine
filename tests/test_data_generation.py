@@ -1,6 +1,6 @@
 from data.synthetic_generator import master_data_generator
 from data.fraud_generators import generate_circular_laundering_data
-from data.account import Account
+from data.base_account import Account
 from data.time_utilities import random_timestamp
 from datetime import datetime,timedelta
 
