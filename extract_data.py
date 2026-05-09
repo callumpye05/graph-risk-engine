@@ -1,56 +1,66 @@
 import csv 
 from database import db 
 
-
-
 def export_tx_tocsv(filename="training_data.csv"):
-    query = """
-    MATCH  (a:Account)-[r:TRANSFERRED_TO]->(b:Account)
-    WITH a,r, toInteger(r.time) AS tx_time
-    OPTIONAL MATCH (a)-[recent:TRANSFERRED_TO]->()
-    WHERE toInteger(recent.time) <tx_time 
-      AND toInteger(recent.time) >(tx_time -3600)
+    #reconstruct the multi dim matrix 
+    query= """
+    MATCH (a:Account)-[r:TRANSFERRED_TO]->(b:Account)
+    WITH a, r,toFloat(r.amount) AS tx_amount, toFloat(r.time) AS tx_time, coalesce(r.is_fraud, 0) AS is_fraud
+    ORDER BY tx_time DESC  
+    LIMIT 5000
+
+    //reconstruct 24h outboudn
+    OPTIONAL MATCH (a)-[out24:TRANSFERRED_TO]->()
+    WHERE toFloat(out24.time) <= tx_time AND toFloat(out24.time) > (tx_time - 86400)
+    WITH a, tx_amount, tx_time, is_fraud, coalesce(sum(out24.amount), 0.0) AS total_out_24h
+
+    //reconstruct 24h inbound
+    OPTIONAL MATCH ()-[in24:TRANSFERRED_TO]->(a)
+    WHERE toFloat(in24.time) <= tx_time AND toFloat(in24.time) > (tx_time - 86400)
+    WITH a, tx_amount, tx_time, is_fraud, total_out_24h, coalesce(sum(in24.amount), 0.0) AS total_in_24h
+
+    // reconstuct 30d outbound (for baseline)
+    OPTIONAL MATCH (a)-[out30:TRANSFERRED_TO]->()
+    WHERE toFloat(out30.time) <= tx_time AND toFloat(out30.time) > (tx_time - 2592000)
+    WITH a, tx_amount, tx_time, is_fraud, total_out_24h, total_in_24h, coalesce(sum(out30.amount), 0.0) AS total_out_30d
+
     RETURN 
         a.id AS account_id, 
-        r.amount AS amount, 
-        r.time AS timestamp,
-        count(recent) AS tx_count_1h,
-        coalesce(r.is_fraud, 0) AS is_fraud
-    ORDER BY timestamp DESC  
-    LIMIT 5000
+        tx_amount AS amount, 
+        tx_time AS timestamp,
+        total_out_24h,
+        total_in_24h,
+        total_out_30d,
+        is_fraud
     """
     try: 
         with db.driver.session() as session:
-            result = session.run(query)
-            records = list(result)
+            result= session.run(query)
+            records =list(result)
 
-            if not records :
+            if not records:
                 print("No transactions found in the database")
+                return
             
             with open(filename, mode='w', newline='') as file:
-                fieldnames = ['account_id', 'amount', 'timestamp', 'is_fraud' , 'tx_count_1h']
+                fieldnames = ['account_id', 'amount', 'timestamp', 'total_out_24h', 'total_in_24h', 'total_out_30d', 'is_fraud']
                 writer = csv.writer(file)
                 writer.writerow(fieldnames)
 
                 for record in records:
-                    amt =float(record['amount'])
-                    true_label =record['is_fraud']
-                    writer.writerow([record['account_id'], amt,record['timestamp'], true_label, record['tx_count_1h']])
-        print(f"Exported {len(records)} transactions to {filename}")
+                    writer.writerow([
+                        record['account_id'], 
+                        record['amount'],
+                        record['timestamp'], 
+                        record['total_out_24h'],
+                        record['total_in_24h'],
+                        record['total_out_30d'],
+                        record['is_fraud']
+                    ])
+                    
+        print(f"Exported {len(records)} matrix profiles to {filename}")
     except Exception as e:
-        print(f"error exporting transactions: {e}")
+        print(f"Error exporting transactions: {e}")
     
 if __name__ == "__main__":
      export_tx_tocsv()
-
-
-
-
-
-            
-
-
-
-
-
- 

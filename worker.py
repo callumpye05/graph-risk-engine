@@ -10,7 +10,7 @@ import subprocess
 
 #learning variables
 TRANSACTION_COUNTER = 0
-LEARNING_BATCH_SIZE = 1000
+LEARNING_BATCH_SIZE = 3110
 
 print(" Activating Engine worker..")
 
