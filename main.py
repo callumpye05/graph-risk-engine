@@ -39,7 +39,7 @@ class Transaction(BaseModel):
     tx_type: str
     is_fraud: int = 0
 
-# --- ROUTE 1: INGESTION (The Front Door for 'Feed the Machine') ---
+#route for 'Feed the Machine'
 @app.post("/api/v1/score-batch")
 async def score_batch(transactions: List[Transaction]):
     for tx in transactions:
@@ -53,18 +53,18 @@ async def score_batch(transactions: List[Transaction]):
     return {"status": "success", "message": f"Injected {len(transactions)} transactions to Kafka"}
 
 
-# --- ROUTE 2: BROADCAST (The Transmission Tower for React) ---
+#ROUTE 2: BROADCAST FOR REACT
 @app.websocket("/ws/pulse")
 async def websocket_pulse(websocket: WebSocket):
     await websocket.accept()
-    print("UI Connected to Live Pulse.") # Console verification
+    print("UI Connected to Live Pulse.")
     
     pubsub = redis_async.pubsub()
     await pubsub.subscribe("live_transactions")
     
     try:
         while True:
-            # Listen to messages on the channel
+            
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message is not None:
                 await websocket.send_text(message["data"])
