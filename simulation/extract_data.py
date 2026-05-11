@@ -1,5 +1,5 @@
 import csv 
-from database import db 
+from shared.database import db 
 
 def export_tx_tocsv(filename="training_data.csv"):
     #reconstruct the multi dim matrix 

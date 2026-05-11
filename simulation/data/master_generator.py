@@ -2,10 +2,10 @@ import random
 import uuid
 from datetime import datetime, timedelta
 
-from data.corporate_persona import CorporatePersona
-from data.merchant_persona import MerchantPersona
-from data.retail_persona import RetailPersona 
-from data.adversarial import SmurfBot, BlitzNode, ObfuscationRelay
+from simulation.data.corporate_persona import CorporatePersona
+from simulation.data.merchant_persona import MerchantPersona
+from simulation.data.retail_persona import RetailPersona 
+from simulation.data.adversarial import SmurfBot, BlitzNode, ObfuscationRelay
 
 def generate_account_id(prefix: str) -> str:
     """Generates a clean, readable ID for the simulation."""
