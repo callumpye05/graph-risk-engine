@@ -45,13 +45,6 @@ def get_cached_account_history(account_id: str, current_timestamp: float):
     return history
 
 
-consumer_config = {
-    'bootstrap.servers': 'localhost:9092',  
-    'group.id': 'the-mac-worker-v1',   
-    'auto.offset.reset': 'earliest'        
-}
-consumer = Consumer(consumer_config)
-consumer.subscribe(['incoming-transactions'])
 
 
 velocity_brain = VelocityMatrixHeuristic(spike_threshold=8.0)
@@ -226,14 +219,24 @@ def apply_risk_momentum(account_id: str, current_matrix_risk: float, current_tim
         return final_score
 
 #loop
-try:
-    print("worker is live ,listening for transactions and ready to learn")
-    while True:
-        msgs=consumer.consume(num_messages=100,timeout=1.0)
-        if msgs is None or len(msgs) ==0:
-            continue 
-        process_batch(msgs)
-except KeyboardInterrupt:
-    print("Halting")
-finally:
-    consumer.close()
+if __name__ == "__main__":
+    
+    consumer_config = {
+        'bootstrap.servers': 'localhost:9092',  
+        'group.id': 'the-mac-worker-v1',   
+        'auto.offset.reset': 'earliest'        
+    }
+    consumer = Consumer(consumer_config)
+    consumer.subscribe(['incoming-transactions'])
+
+    try:
+        print("worker is live, listening for transactions and ready to learn")
+        while True:
+            msgs = consumer.consume(num_messages=100, timeout=1.0)
+            if msgs is None or len(msgs) == 0:
+                continue 
+            process_batch(msgs)
+    except KeyboardInterrupt:
+        print("Halting")
+    finally:
+        consumer.close()
