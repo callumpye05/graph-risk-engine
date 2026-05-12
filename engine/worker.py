@@ -1,15 +1,14 @@
 import json
 import time
 from confluent_kafka import Consumer
-from heuristics.pass_through import VelocityMatrixHeuristic
-from scoring.risk_score import synthesize_risk_profile
-from database import db
+from engine.heuristics.pass_through import VelocityMatrixHeuristic
+from engine.scoring.risk_score import synthesize_risk_profile
+from shared.database import db
 import redis
 import os
 import subprocess
 
 #learning variables
-TRANSACTION_COUNTER = 0
 LEARNING_BATCH_SIZE = 3110
 
 print(" Activating Engine worker..")
@@ -46,13 +45,6 @@ def get_cached_account_history(account_id: str, current_timestamp: float):
     return history
 
 
-consumer_config = {
-    'bootstrap.servers': 'localhost:9092',  
-    'group.id': 'the-mac-worker-v1',   
-    'auto.offset.reset': 'earliest'        
-}
-consumer = Consumer(consumer_config)
-consumer.subscribe(['incoming-transactions'])
 
 
 velocity_brain = VelocityMatrixHeuristic(spike_threshold=8.0)
@@ -117,7 +109,7 @@ def update_multi_window_velocity(account_id: str, amount: float, direction: str)
     return velocity_profile
 
 def process_batch(messages):
-    global TRANSACTION_COUNTER 
+    
 
     transactions_data =[json.loads(m.value().decode('utf-8')) for m in messages if not m.error()]
 
@@ -164,21 +156,22 @@ def process_batch(messages):
 
         print(f"Scored {account_id} | Risk: {final_risk:.2f} [{profile['threat_level']}] | Pass-Through: {profile['components']['pass_through_score']:.2f}")
 
-    TRANSACTION_COUNTER += len(transactions_data)
+    current_count = redis_client.incrby("engine:tx_count", len(transactions_data))
     
     #new data means new calculatons for optimization
-    if TRANSACTION_COUNTER >= LEARNING_BATCH_SIZE:
+    if current_count >= LEARNING_BATCH_SIZE:
         print(f"\n {LEARNING_BATCH_SIZE} entries reached, let Neo4j finish writing")
         time.sleep(2)
         try:
             print("Launching Optimizer.")
-            subprocess.run("python extract_data.py",shell=True)
+            subprocess.run("python -m simulation.extract_data",shell=True)
             subprocess.run("docker exec fraud-optimizer julia or_optimization/optimize.jl", shell=True)
         except Exception as e:
             print(f"Failed to trigger optimizer: {e}")
             
         #reset for next learning cycle 
-        TRANSACTION_COUNTER = 0
+        redis_client.set("engine:tx_count", 0)
+        print("Optimizer completed, counter reset.")
 
 def apply_risk_momentum(account_id: str, current_matrix_risk: float, current_timestamp: float, redis_client) -> float:
     """
@@ -226,14 +219,24 @@ def apply_risk_momentum(account_id: str, current_matrix_risk: float, current_tim
         return final_score
 
 #loop
-try:
-    print("worker is live ,listening for transactions and ready to learn")
-    while True:
-        msgs=consumer.consume(num_messages=100,timeout=1.0)
-        if msgs is None or len(msgs) ==0:
-            continue 
-        process_batch(msgs)
-except KeyboardInterrupt:
-    print("Halting")
-finally:
-    consumer.close()
+if __name__ == "__main__":
+    
+    consumer_config = {
+        'bootstrap.servers': 'localhost:9092',  
+        'group.id': 'the-mac-worker-v1',   
+        'auto.offset.reset': 'earliest'        
+    }
+    consumer = Consumer(consumer_config)
+    consumer.subscribe(['incoming-transactions'])
+
+    try:
+        print("worker is live, listening for transactions and ready to learn")
+        while True:
+            msgs = consumer.consume(num_messages=100, timeout=1.0)
+            if msgs is None or len(msgs) == 0:
+                continue 
+            process_batch(msgs)
+    except KeyboardInterrupt:
+        print("Halting")
+    finally:
+        consumer.close()

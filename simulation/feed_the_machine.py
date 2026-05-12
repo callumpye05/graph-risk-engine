@@ -1,7 +1,7 @@
 import json
 import time
 from kafka import KafkaProducer
-from data.master_generator import run_simulation
+from simulation.data.master_generator import run_simulation
 
 #Initialize kafka
 producer = KafkaProducer(

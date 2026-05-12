@@ -1,6 +1,6 @@
 import random
 from datetime import datetime
-from data.base_account import BaseAccount 
+from simulation.data.base_account import BaseAccount 
 
 class SmurfBot(BaseAccount):
     """
@@ -82,7 +82,7 @@ class BlitzNode(BaseAccount):
 
 import random
 from datetime import datetime
-from data.base_account import BaseAccount
+from simulation.data.base_account import BaseAccount
 
 class ObfuscationRelay(BaseAccount):
     """

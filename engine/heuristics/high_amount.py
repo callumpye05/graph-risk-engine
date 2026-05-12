@@ -1,4 +1,4 @@
-from heuristics.base import Heuristic 
+from engine.heuristics.base import Heuristic 
 
 class HighAmountHeuristic:
     def __init__(self, std_threshold=3.0):

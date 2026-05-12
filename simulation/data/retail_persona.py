@@ -1,5 +1,5 @@
 import random
-from data.base_account import BaseAccount
+from simulation.data.base_account import BaseAccount
 from datetime import datetime
 
 class RetailPersona(BaseAccount):

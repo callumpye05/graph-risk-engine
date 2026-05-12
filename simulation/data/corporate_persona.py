@@ -1,6 +1,6 @@
 import random
 from datetime import datetime
-from data.base_account import BaseAccount
+from simulation.data.base_account import BaseAccount
 class CorporatePersona(BaseAccount):
     def __init__(self, account_id: str, creation_time: datetime):
         #requires massive liquidity to operate
